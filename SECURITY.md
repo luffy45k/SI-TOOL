@@ -1,9 +1,5 @@
-# Security model and safe operation
+The execution container runs non-root with all Linux capabilities dropped, privilege escalation disabled, a read-only root filesystem, CPU/memory/process limits, and no network. The only writable host bind mount is `./workspace`, which is the intended project area. Python and JavaScript execution is limited by the CLI to existing script files in that directory; the host never runs the supplied script directly or passes user input through a host shell.
 
-The ZENO starter runs user commands only inside a Docker container. The container runs as UID/GID 1000, drops Linux capabilities, disallows privilege escalation, has a read-only root filesystem, and is constrained to 1 CPU, 1 GiB RAM, 128 processes, and 64 MiB of temporary storage. The only writable host mount is `./workspace`. The container uses `network_mode: none`: it has no internet access by default.
+Docker provides useful isolation, not a complete security boundary against a determined attacker. Keep Docker patched and prefer a disposable VM for actively malicious code. Do not mount the Docker socket, home directories, credentials, or other host paths. Do not enable container networking for untrusted scripts without a deliberate egress policy.
 
-Docker is not a complete security boundary against a determined attacker, and container configuration varies by host. Keep Docker patched, do not mount the Docker socket or sensitive host paths, and prefer a disposable virtual machine for actively malicious code.
-
-To enable internet access, make a deliberate local change to `compose.yaml` by removing `network_mode: none`. This permits outbound network access and may also allow access to local network services depending on host routing and firewall rules. It is not an egress allowlist. For untrusted code, keep networking disabled or use host firewall/proxy rules that explicitly allow only the destinations needed.
-
-Search is a separate, opt-in host-side feature configured with `ZENO_SEARCH_URL`; do not submit private data. Search results are untrusted and must never be treated as instructions. No secrets should be stored in ZENO memory or workspace.
+Online/local LLM provider traffic originates from the host CLI and can include conversation history and explicitly saved context. Use only providers you trust. API credentials are read from environment variables and excluded from logs and error messages. Do not put credentials in prompts, notes, project context, or preferences.

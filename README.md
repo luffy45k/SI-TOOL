@@ -1,45 +1,34 @@
 # ZENO AI
 
-ZENO AI is a local-first, modular assistant prototype with a CLI, task planner, persistent notes, and an isolated Docker execution sandbox. It is intentionally transparent: the initial brain is a small rule-based planner, not a secretly autonomous or self-modifying agent. Network access is disabled inside the execution container by default.
+CLI-only local-first AI coding assistant starter. This first working slice provides OpenAI-compatible online chat, optional local Ollama chat, automatic online-first fallback, SQLite memory, transparent offline planning, and Python/JavaScript execution of workspace scripts in Docker. It does **not** claim a fully autonomous coding loop: autonomous file editing, approval workflows, code analysis, and iterative execution are follow-up milestones in `PLAN.md`.
 
-## Requirements
+## Requirements and setup
 
-- Python 3.11+
-- Docker Engine and Docker Compose v2 for sandboxed execution
+- Python 3.11+ (runtime uses only the standard library)
+- Docker Engine and Docker Compose v2 for running scripts
+- Ollama installed and a model pulled for local inference (optional)
 
-## Quick start
+Set `OPENAI_API_KEY` in your shell to enable the OpenAI-compatible online provider. The default endpoint/model are `https://api.openai.com/v1/chat/completions` and `gpt-4o-mini`; override with `ZENO_ONLINE_URL` and `ZENO_ONLINE_MODEL` for a compatible API. For local Ollama, set `ZENO_LOCAL_URL` (for example `http://127.0.0.1:11434`) and optionally `ZENO_LOCAL_MODEL` (default `llama3.2`). The router attempts online first when configured and falls back to local after a provider failure. Credentials are only read from environment and are never printed. Do not commit keys or place them in prompts/memory.
+
+## Commands
 
 ```sh
 python -m zeno --help
-python -m zeno plan "Create a small Python project"
-python -m zeno remember "The project uses Python"
+python -m zeno plan "Add a feature"
+python -m zeno ask "Explain this project"
+python -m zeno remember "Project uses Python"
 python -m zeno memory
-```
-
-Run a command in the sandbox (Docker must be running):
-
-```sh
-python -m zeno run -- python -c 'print("hello from ZENO")'
-```
-
-The sandbox can only write to `./workspace`, runs as a non-root user, drops Linux capabilities, sets CPU/memory/process limits, and has no network access by default. It is a useful isolation layer, not a substitute for a hardened VM when running hostile code. See `SECURITY.md` before enabling network access or running untrusted tasks.
-
-## Components
-
-- **Brain:** replaceable planner/reasoning interface and local memory store.
-- **Autonomous agent:** explicit task manager, bounded executor, and self-critique result check. No background loop; the user starts each run.
-- **Secure sandbox:** Docker-backed terminal/code runner, workspace-only files, network disabled by default.
-- **Tools:** Python runner and Git status/diff helpers; project scaffolding; optional web search adapter using an explicitly configured search endpoint.
-- **Main:** CLI interface.
-
-## Configuration
-
-Set `ZENO_SEARCH_URL` to an HTTPS endpoint that accepts `q` as a query parameter and returns JSON to enable `zeno search`. Search requests are not sent unless this variable is configured. Use an endpoint you trust; returned content is untrusted input. Do not send secrets or private information in queries.
-
-Memory is stored locally at `~/.zeno/memory.json`. It is plain text; do not save credentials or sensitive data there.
-
-## Development
-
-```sh
+python -m zeno build demo
+# Create workspace/hello.py first, then:
+python -m zeno run python hello.py
+python -m zeno run javascript app.js
 python -m unittest discover -s tests -v
 ```
+
+Conversation history, notes, project context, and preferences are stored in `~/.zeno/memory.sqlite3`. No API key is stored there. `zeno plan` works offline. Chat needs at least one configured provider.
+
+## Sandbox security
+
+`zeno run` accepts only an existing `.py`, `.js`, or `.mjs` script path relative to `workspace/`; it invokes only a fixed Docker Compose command and never a host shell. Docker mounts only the dedicated workspace, runs as non-root, drops capabilities, denies privilege escalation, sets CPU/memory/process limits, makes the container root filesystem read-only, and disables container networking. There are no published ports. Keep Docker patched. A container is not a hardened VM; do not run hostile code if you need a strong isolation boundary. The local model endpoint and online API run outside the execution container.
+
+See `PLAN.md` for implemented scope and follow-up work, and `SECURITY.md` for security details.
