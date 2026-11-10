@@ -22,13 +22,18 @@ python -m zeno build demo
 # Create workspace/hello.py first, then:
 python -m zeno run python hello.py
 python -m zeno run javascript app.js
+python -m zeno run --help
 python -m unittest discover -s tests -v
 ```
 
 Conversation history, notes, project context, and preferences are stored in `~/.zeno/memory.sqlite3`. No API key is stored there. `zeno plan` works offline. Chat needs at least one configured provider.
 
-## Sandbox security
+## Sandboxed execution
 
-`zeno run` accepts only an existing `.py`, `.js`, or `.mjs` script path relative to `workspace/`; it invokes only a fixed Docker Compose command and never a host shell. Docker mounts only the dedicated workspace, runs as non-root, drops capabilities, denies privilege escalation, sets CPU/memory/process limits, makes the container root filesystem read-only, and disables container networking. There are no published ports. Keep Docker patched. A container is not a hardened VM; do not run hostile code if you need a strong isolation boundary. The local model endpoint and online API run outside the execution container.
+`zeno run` accepts an existing `.py`, `.js`, or `.mjs` script path relative to `workspace/` and runs it in Docker; user code is never executed by a host shell or directly on the host. Python 3.12 and Debian's Node.js runtime are installed in the image. Docker Compose mounts only the selected workspace directory at `/workspace`.
+
+The container runs as UID/GID 1000, is explicitly not privileged, drops all Linux capabilities, disables privilege escalation, uses a read-only root filesystem, disables networking, and limits CPU, memory, processes, and temporary storage. A GNU `timeout` process enforces a default 30-second execution limit in the container; the host also bounds a stuck Docker/Compose client. Override the script limit with `--timeout` only if the CLI supports it; otherwise use the Python API's `run_script(..., timeout=seconds)` (maximum one hour). Exit status 124 is treated as a sandbox timeout.
+
+Real Python/JavaScript/timeout integration tests run when Docker Engine and Compose v2 are available; they are skipped otherwise. Unit tests cover path escape rejection, Docker CLI absence, host-client timeout, and Compose security settings without requiring Docker. Run all tests with `python -m unittest discover -s tests -v`.
 
 See `PLAN.md` for implemented scope and follow-up work, and `SECURITY.md` for security details.

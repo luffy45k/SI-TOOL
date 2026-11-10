@@ -8,6 +8,7 @@ services:
     user: "1000:1000"
     working_dir: /workspace
     read_only: true
+    privileged: false
     cap_drop:
       - ALL
     security_opt:
@@ -19,4 +20,4 @@ services:
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
     volumes:
-      - ./workspace:/workspace
+      - ${ZENO_WORKSPACE:-./workspace}:/workspace
